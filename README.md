@@ -2,7 +2,7 @@
 
 LilGo is a complier and bytecode VM for the LilGo programming language.
 LilGo is a subset of the [go programming language](https://go.dev/) and contains basic syntax like if statments and for loops.
-You can find the formal grammer for the LilGo language below.
+You can find the formal grammer for the LilGo language [here](#lilgo-specification)
 
 This project was inspired by the [Tiny-C language](https://gist.github.com/seanjensengrey/874a1dcdb7b40407ac916dd2090051a4) created by Marc Feeley
 Currently the LilGo comes in a *290* lines of code total.
