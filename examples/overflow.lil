@@ -1,0 +1,10 @@
+a = 255
+// this will overflow to become 1
+a = a + 2
+
+b = 1
+// this will underflow to become 255
+b = b - 2
+
+// this will overflow to become 232
+c = 1000
