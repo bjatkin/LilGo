@@ -5,7 +5,7 @@ LilGo is a subset of the [go programming language](https://go.dev/) and contains
 You can find the formal grammer for the LilGo language [here](#lilgo-specification)
 
 This project was inspired by the [Tiny-C language](https://gist.github.com/seanjensengrey/874a1dcdb7b40407ac916dd2090051a4) created by Marc Feeley
-Currently the LilGo comes in a *290* lines of code total.
+Currently the LilGo comes in a *293* lines of code total.
 ```sh
 $ cloc main.go
        1 text file.
@@ -16,7 +16,7 @@ github.com/AlDanial/cloc v 1.98  T=0.01 s (155.3 files/s, 54814.3 lines/s)
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-Go                               1             27             36            290
+Go                               1             27             36            293
 -------------------------------------------------------------------------------
 ```
 this includes a `lexer`, `parser`, `complier` and `bytecode VM`.
@@ -183,13 +183,12 @@ The formal grammar for `LilGo` is described bellow using [Extended Backus-Naur f
 
 ```
 <script> ::= {<stmt>}
-<stmt> ::= "if" <expr> <block_stmt>
-		 | "if" <expr> <block_stmt> "else" <block_stmt>
-	     | "for" [<var_stmt>] ";" <expr> ";" [<var_stmt>] <block_stmt>
+<stmt> ::= "if" <expr> <block_stmt> "\n"
+		 | "if" <expr> <block_stmt> "else" <block_stmt> "\n"
+	     | "for" [<var_stmt>] ";" <expr> ";" [<var_stmt>] <block_stmt> "\n"
 		 | <var_stmt> "\n"
-<block_stmt> ::= "{\n" {<stmt>} "}\n"
+<block_stmt> ::= "{\n" {<stmt>} "}"
 <var_stmt> ::= <id> "=" <expr> | <expr>
-<expr> := <id> "=" <expr>
 <expr> ::= <sum_expr>
 		 | <expr> "<" <expr>
 		 | <expr> ">" <expr>

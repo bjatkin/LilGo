@@ -29,7 +29,7 @@ type Uint8Tok string
 
 var letters, numbers = "abcdefghijklmnopqrstuvwxyz", "0123456789"
 var KnownTokens = []any{
-	NewlineTok("\n"), LBraceTok("{\n"), RBraceTok("}\n"), LParenTok("("), RParenTok(")"), AddTok("+"), SubTok("-"), LessTok("<"),
+	NewlineTok("\n"), LBraceTok("{\n"), RBraceTok("}"), LParenTok("("), RParenTok(")"), AddTok("+"), SubTok("-"), LessTok("<"),
 	GreatTok(">"), AssignTok("="), EqualTok("=="), NotEqualTok("!="), SemicolonTok(";"), IfTok("if"), ElseTok("else"), ForTok("for"),
 }
 
@@ -50,7 +50,7 @@ func main() {
 		for nextToken(false) != nil {
 			program = append(program, stmt())
 		}
-		must(0, os.WriteFile(strings.TrimSuffix(os.Args[2], ".lil"), append(complie(program), HaltOp), 0o0655))
+		must(0, os.WriteFile(strings.TrimSuffix(os.Args[2], ".lil"), append(compile(program), HaltOp), 0o0655))
 	case "run":
 		globals := run(file)
 		for i, name := range letters {
@@ -100,12 +100,12 @@ func nextToken(consume bool) any {
 			intValue += string(src[i])
 		}
 		token = Uint8Tok(intValue)
-	// this handles varable names which must be a single letter a-z
+	// this handles variable names which must be a single letter a-z
 	case strings.Contains(letters, string(src[srcIdx])):
 		token = VarTok(string(src[srcIdx]))
 	}
 
-	// check all the known tokens likes keywords and symboles
+	// check all the known tokens likes keywords and symbols
 	for _, known := range KnownTokens {
 		if strings.HasPrefix(string(src[srcIdx:]), fmt.Sprint(known)) {
 			token = known
@@ -142,14 +142,15 @@ type Sub Node[string]
 type Assign Node[string]
 type None Node[struct{}]
 
-// stmt parses tokens into statment trees
+// stmt parses tokens into statement trees
 func stmt() any {
 	switch v := nextToken(true).(type) {
 	case NewlineTok:
 		return None{}
 	case IfTok:
 		test, body := expr(), blockStmt()
-		if _, ok := nextToken(false).(ElseTok); ok {
+		if _, ok := nextToken(true).(ElseTok); ok {
+			defer func() { _ = nextToken(true).(NewlineTok) }()
 			return If{"if", []any{test, body, blockStmt()}}
 		}
 		return If{"if", []any{test, body}}
@@ -159,7 +160,7 @@ func stmt() any {
 			initial = varStmt(nextToken(true))
 		}
 		_ = nextToken(true).(SemicolonTok)
-		// the test expression is required unlike the other two var statments because
+		// the test expression is required unlike the other two var statements because
 		// there is no break keyword in the language so there is no other way to terminate
 		// for loops
 		test = expr()
@@ -167,6 +168,7 @@ func stmt() any {
 		if _, ok := nextToken(false).(LBraceTok); !ok {
 			check = varStmt(nextToken(true))
 		}
+		defer func() { _ = nextToken(true).(NewlineTok) }()
 		return For{"for", []any{initial, test, check, blockStmt()}}
 	default:
 		defer func() { _ = nextToken(true).(NewlineTok) }()
@@ -174,18 +176,18 @@ func stmt() any {
 	}
 }
 
-// blockStmt parses block statements that start and end with {\n ... }\n
-// note that in LilGO curly braces MUST be followed by a new line
+// blockStmt parses block statements that start and end with {\n ... }
+// note that in LilGO opening curly braces MUST be followed by a new line
 func blockStmt() any {
 	_, stmts := nextToken(true).(LBraceTok), []any{}
-	for nextToken(false) != RBraceTok("}\n") {
+	for nextToken(false) != RBraceTok("}") {
 		stmts = append(stmts, stmt())
 	}
 	_ = nextToken(true).(RBraceTok)
 	return stmts
 }
 
-// varStmt parses assignment staments for variables as well as expressions
+// varStmt parses assignment statements for variables as well as expressions
 func varStmt(v any) any {
 	if _, ok := nextToken(false).(AssignTok); ok {
 		_ = nextToken(true).(AssignTok)
@@ -246,7 +248,7 @@ func primary() any {
 
 // === Complier ===
 
-// This block defines the bytcode operands for the VM
+// This block defines the bytecode operands for the VM
 const LoadOp = byte(0x01)
 const StoreOp = byte(0x02)
 const PushOp = byte(0x03)
@@ -261,8 +263,8 @@ const JumpOp = byte(0x0B)
 const JumpBackOp = byte(0x0C)
 const HaltOp = byte(0x0D)
 
-// complie takes a program (which is a list of statment AST nodes) and complies them into valid bytecode
-func complie(program []any) []byte {
+// compile takes a program (which is a list of statement AST nodes) and complies them into valid bytecode
+func compile(program []any) []byte {
 	code := []byte{}
 	for _, stmt := range program {
 		switch v := stmt.(type) {
@@ -271,28 +273,29 @@ func complie(program []any) []byte {
 		case Uint8:
 			code = append(code, PushOp, byte(v.V))
 		case Add:
-			code = append(append(code, complie([]any{v.sub[0], v.sub[1]})...), AddOp)
+			code = append(append(code, compile([]any{v.sub[0], v.sub[1]})...), AddOp)
 		case Sub:
-			code = append(append(code, complie([]any{v.sub[0], v.sub[1]})...), SubOp)
+			code = append(append(code, compile([]any{v.sub[0], v.sub[1]})...), SubOp)
 		case Less:
-			code = append(append(code, complie([]any{v.sub[0], v.sub[1]})...), LessOp)
+			code = append(append(code, compile([]any{v.sub[0], v.sub[1]})...), LessOp)
 		case Great:
-			code = append(append(code, complie([]any{v.sub[1], v.sub[0]})...), LessOp)
+			code = append(append(code, compile([]any{v.sub[1], v.sub[0]})...), LessOp)
 		case Equal:
-			code = append(append(code, complie([]any{v.sub[0], v.sub[1]})...), EqualOp)
+			code = append(append(code, compile([]any{v.sub[0], v.sub[1]})...), EqualOp)
 		case NotEqual:
-			code = append(append(code, complie([]any{v.sub[0], v.sub[1]})...), NotEqualOp)
+			code = append(append(code, compile([]any{v.sub[0], v.sub[1]})...), NotEqualOp)
 		case Assign:
-			code = append(append(append(code, complie([]any{v.sub[0]})...), StoreOp), byte(strings.Index(letters, v.V)))
+			code = append(append(append(code, compile([]any{v.sub[0]})...), StoreOp), byte(strings.Index(letters, v.V)))
 		case If:
-			test, body := complie([]any{v.sub[0]}), complie(v.sub[1].([]any))
+			test, body := compile([]any{v.sub[0]}), compile(v.sub[1].([]any))
 			code = append(append(append(code, test...), JumpZOp, byte(len(body))), body...)
 			if len(v.sub) == 3 {
-				elseBody := complie(v.sub[2].([]any))
+				elseBody := compile(v.sub[2].([]any))
+				code[len(code)-len(body)-1] += 1
 				code = append(append(code, JumpOp, byte(len(elseBody))), elseBody...)
 			}
 		case For:
-			init, test, body := complie([]any{v.sub[0]}), complie([]any{v.sub[1]}), complie(append(v.sub[3].([]any), v.sub[2]))
+			init, test, body := compile([]any{v.sub[0]}), compile([]any{v.sub[1]}), compile(append(v.sub[3].([]any), v.sub[2]))
 			postBody := []byte{JumpBackOp, byte(2 + len(body) + len(test))}
 			code = append(append(append(append(append(code, init...), test...), JumpZOp, byte(len(body)+len(postBody))), body...), postBody...)
 			// There is no default section here so None{} statements are simply skipped
